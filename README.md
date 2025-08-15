@@ -1,6 +1,4 @@
-# Ask Hallem-Berg Digital Garden - Setup & Maintenance
-
-Personal documentation for maintaining this Quartz-based digital garden.
+# Personal Quartz
 
 ## Repository Structure
 
