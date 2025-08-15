@@ -1,18 +1,43 @@
-# Quartz v4
+# Ask Hallem-Berg Digital Garden - Setup & Maintenance
 
-> “[One] who works with the door open gets all kinds of interruptions, but [they] also occasionally gets clues as to what the world is and what might be important.” — Richard Hamming
+Personal documentation for maintaining this Quartz-based digital garden.
 
-Quartz is a set of tools that helps you publish your [digital garden](https://jzhao.xyz/posts/networked-thought) and notes as a website for free.
-Quartz v4 features a from-the-ground rewrite focusing on end-user extensibility and ease-of-use.
+## Repository Structure
 
-🔗 Read the documentation and get started: https://quartz.jzhao.xyz/
+- **This repo**: Quartz framework and configuration
+- **Content repo**: `ahallemberg/obsidian-content` - Contains all markdown files
+- **Content is pulled in as a git submodule**
 
-[Join the Discord Community](https://discord.gg/cRFFHYye7t)
+## Local Development
 
-## Sponsors
+```bash
+# Start development server
+npx quartz build --serve
+```
 
-<p align="center">
-  <a href="https://github.com/sponsors/jackyzha0">
-    <img src="https://cdn.jsdelivr.net/gh/jackyzha0/jackyzha0/sponsorkit/sponsors.svg" />
-  </a>
-</p>
+## Deployment
+
+- **Platform**: Cloudflare Pages
+- **Build command**: `npm run build`
+- **Output directory**: `public`
+- **Auto-deploys** on push to main branch
+
+## Configuration
+
+### Theme Colors
+- Minimal gray palette (no bright colors)
+- Matches main portfolio aesthetic
+- Light/dark mode support
+
+### Custom Modifications
+- Footer removed (edited `Footer.tsx`)
+- Typography: Inter font family
+- Max width: matches portfolio (72rem)
+
+## Content Management
+
+### Adding New Notes
+1. Add markdown files to the content submodule repo
+2. Use Obsidian for editing (supports wikilinks, backlinks)
+3. Push to content repo
+4. Update submodule in this repo
