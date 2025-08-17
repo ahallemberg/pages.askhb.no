@@ -1,0 +1,29 @@
+name: Update Submodule
+on:
+  repository_dispatch:
+    types: [submodule-updated]
+
+jobs:
+  update-submodule:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Update submodule
+        run: |
+          git submodule update --remote content
+          
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Update submodule ${{ github.event.client_payload.submodule }}"
+          title: "Auto-update submodule: ${{ github.event.client_payload.submodule }}"
+          body: |
+            Automated submodule update triggered by changes in ${{ github.event.client_payload.submodule }}
+            
+            Latest commit: ${{ github.event.client_payload.ref }}
+          branch: update-submodule-${{ github.run_number }}
