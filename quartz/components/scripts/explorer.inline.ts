@@ -224,7 +224,13 @@ async function setupExplorer(currentSlug: FullSlug) {
       // try to scroll to the active element if it exists
       const activeElement = explorerUl.querySelector(".active")
       if (activeElement) {
-        activeElement.scrollIntoView({ behavior: "smooth" })
+        // scroll the explorer list itself rather than calling scrollIntoView, which
+        // also scrolls the page down on a full page load
+        const activeRect = activeElement.getBoundingClientRect()
+        const explorerRect = explorerUl.getBoundingClientRect()
+        if (activeRect.top < explorerRect.top || activeRect.bottom > explorerRect.bottom) {
+          explorerUl.scrollTop += activeRect.top - explorerRect.top
+        }
       }
     }
 
