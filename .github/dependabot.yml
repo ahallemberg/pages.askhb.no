@@ -4,6 +4,19 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    # Quartz 4.5.1's vendored code under quartz/ is incompatible with these.
+    # Each one was tried and reverted; see the Gotchas section of CLAUDE.md.
+    # Re-check them when upgrading Quartz itself, not before.
+    ignore:
+      # v5 removed the default export that Quartz imports; the build fails.
+      - dependency-name: "js-yaml"
+        update-types: ["version-update:semver-major"]
+      # v6 rejects `moduleResolution: node10` in tsconfig.json, v7 removed it.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      # 3.0.5 types hProperties.className as string[]; ofm.ts assigns a string.
+      - dependency-name: "@types/hast"
+        versions: [">3.0.4"]
     groups:
       production-dependencies:
         applies-to: "version-updates"

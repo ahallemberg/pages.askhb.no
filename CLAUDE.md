@@ -57,6 +57,16 @@ Changes made to `quartz/` in this fork. **A merge from `upstream` can silently r
 
 `Plugin.CustomOgImages()` is enabled (upstream ships it commented out). It renders a 1200×630 card per page — title, description, date, reading time — so `og:image` resolves to a real generated `<slug>-og-image.webp`. This fork has no `quartz/static/og-image.png` fallback, so if the plugin is ever disabled, `og:image` will 404. The card's description comes from the first ~150 characters of the page body, so a byline or metadata line at the top of a note ends up in the social preview.
 
+**Three npm packages are pinned below their latest and must stay there** while this fork tracks Quartz 4.5.1. Each was tried and reverted:
+
+| Package | Held at | Why |
+|---|---|---|
+| `js-yaml` | 4.x | v5 removed the default export Quartz imports — `npx quartz build` fails outright |
+| `typescript` | 5.x | v6 rejects `moduleResolution: node10` in `tsconfig.json`; v7 removed the mode |
+| `@types/hast` | 3.0.4 | 3.0.5 types `hProperties.className` as `string[]`, but `quartz/plugins/transformers/ofm.ts` assigns a string |
+
+`.github/dependabot.yml` carries matching `ignore` rules so these are not re-proposed every month. Re-check them when upgrading Quartz itself, not before, and keep the config and this table in sync.
+
 `content/index.md` is not a landing page — it is a `<meta http-equiv="refresh">` redirect to askhb.no. The root of this site is meant to bounce visitors to the portfolio.
 
 The submodule checkout often sits on a different branch than the commit `main` pins, so `git status` shows a modified `content` entry that has nothing to do with your change. Stage explicit paths; never `git add -A` here.
@@ -73,4 +83,4 @@ Changes reach `main` through a pull request, not a direct push; the history is m
 
 ## Deployment
 
-Cloudflare Pages, building from `main` of this repo. Dependabot opens grouped npm update PRs.
+Cloudflare Pages, building from `main` of this repo. Dependabot opens grouped npm and github-actions update PRs monthly, minus the ignored packages above.
