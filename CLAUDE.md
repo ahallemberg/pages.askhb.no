@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-A fork of [Quartz](https://quartz.jzhao.xyz/) v4.5.1, deployed to `pages.askhb.no`. It renders the write-ups linked from the portfolio at askhb.no.
+A fork of [Quartz](https://quartz.jzhao.xyz/) v4.5.2, deployed to `pages.askhb.no`. It renders the write-ups linked from the portfolio at askhb.no.
 
 Almost everything under `quartz/` is vendored upstream code, and `upstream` is a real remote (`https://github.com/jackyzha0/quartz.git`). Treat that directory as a third-party dependency: prefer `quartz.config.ts` and `quartz.layout.ts` over editing it, and see _Local patches_ below before changing anything inside it.
 
@@ -44,6 +44,17 @@ If a new page 404s after the content repo was merged, check for an unmerged auto
 ### Cloudflare caching outlives deletions
 
 Pages are served with `cache-control: public, s-maxage=604800`. A page deleted from `content/` disappears from the build but its URL keeps returning 200 from Cloudflare's edge for up to 7 days. Deleting a page is not complete until the URL is purged: Cloudflare dashboard → askhb.no → Caching → Configuration → Custom Purge. The zone has no cache rules or page rules, so its Edge Cache TTL setting does not apply here.
+
+## Upstream v5: not an upgrade path
+
+Upstream's default branch is now Quartz 5, but it is a rebuild rather than a version bump, so don't treat it as one:
+
+- `quartz.config.ts` and `quartz.layout.ts` are replaced by a YAML config (`quartz.config.default.yaml`).
+- Components move out of the vendored tree into ~45 npm packages (`@quartz-community/*`), so the local patches below have no file to apply to.
+- This fork's history is squashed, so there is no common ancestor with upstream — migrating means rebuilding, not merging.
+- `@quartz-community/explorer` still calls `activeElement.scrollIntoView({behavior:"smooth"})`, so v5 reintroduces the page-scroll bug patched below, in a package rather than a file.
+
+The upside is real but later: no fork to maintain, plugins via npm, and the pinned dependencies above stop mattering. Revisit against a settled 5.x.
 
 ## Local patches to vendored Quartz
 
