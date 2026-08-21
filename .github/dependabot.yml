@@ -4,9 +4,13 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
-    # Quartz 4.5.1's vendored code under quartz/ is incompatible with these.
-    # Each one was tried and reverted; see the Gotchas section of CLAUDE.md.
-    # Re-check them when upgrading Quartz itself, not before.
+    # Quartz's vendored code under quartz/ is incompatible with these. Each one
+    # was tried and reverted; see the Gotchas section of CLAUDE.md. Re-check them
+    # when upgrading Quartz itself, not before.
+    #
+    # Scoped to update-types wherever possible: a bare `dependency-name` ignore
+    # also suppresses Dependabot SECURITY updates for that package, which we
+    # never want. Security PRs are enabled in repo settings.
     ignore:
       # v5 removed the default export that Quartz imports; the build fails.
       - dependency-name: "js-yaml"
@@ -15,6 +19,9 @@ updates:
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
       # 3.0.5 types hProperties.className as string[]; ofm.ts assigns a string.
+      # This one has to be a version range because the break is a patch bump.
+      # Acceptable only because @types/* ship type declarations and no runtime
+      # code, so there is nothing here for a CVE to affect.
       - dependency-name: "@types/hast"
         versions: [">3.0.4"]
     groups:
