@@ -34,7 +34,7 @@ const scheme = (tokens: typeof palette.colors.light) => ({
   darkgray: tokens["ink-muted"],
   dark: tokens.ink,
   secondary: tokens.accent,
-  tertiary: tokens["ink-faint"],
+  tertiary: tokens.ink,
   highlight: tokens["rule-faint"],
   textHighlight: tokens.accent + MARK_ALPHA,
 })

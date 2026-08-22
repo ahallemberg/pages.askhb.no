@@ -1,3 +1,35 @@
 @use "./base.scss";
 
-// put your custom CSS here!
+/*
+ * --tertiary is the link hover colour, and the portfolio's hover is
+ * accent -> ink, so the palette hands this slot the ink token.
+ *
+ * Upstream reuses that same slot as a 60% background band in two places, where
+ * ink would leave the text sitting on it at roughly 2:1. Both are pinned back
+ * to the faint token here, so the hover can be ink without taking selection and
+ * search highlighting down with it. One token cannot be both a foreground and a
+ * background, which is why this cannot be solved in the palette.
+ *
+ * base.scss is @use'd above, so these come after the rules they replace and win
+ * at equal specificity -- note that this is only true of ordinary rules. The
+ * :root block Quartz builds from quartz.config.ts is appended after this file,
+ * so a custom property redefined here would still lose.
+ */
+::selection {
+  background: color-mix(in srgb, var(--gray) 60%, rgba(255, 255, 255, 0));
+}
+
+.search > .search-container > .search-space > .search-layout .highlight {
+  background: color-mix(in srgb, var(--gray) 60%, rgba(255, 255, 255, 0));
+}
+
+/*
+ * The current page in the explorer. With --tertiary now carrying ink, upstream's
+ * rule left the active entry at ink against ink-at-0.75 for everything else --
+ * a "you are here" marker separated from its neighbours by opacity alone.
+ * Accent is the portfolio's own marker for the same job, and at 8.03:1 on paper
+ * / 6.82:1 in dark it does not lean on colour to be findable.
+ */
+.explorer-content ul li > a.active {
+  color: var(--secondary);
+}
