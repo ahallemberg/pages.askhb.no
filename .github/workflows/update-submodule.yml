@@ -1,4 +1,8 @@
 name: Update Submodule
+
+# Two repos dispatch here now: obsidian-content when a note changes, and
+# askhb-theme when the shared palette changes. Either way this only opens a PR;
+# merging it is what bumps the pointer and triggers the Cloudflare Pages build.
 on:
   repository_dispatch:
     types: [submodule-updated]
@@ -11,11 +15,30 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Update submodule
+
+      # The payload picks the submodule, so it reaches a shell. Read it from the
+      # environment and match it against the two known paths rather than
+      # interpolating it into the script: an allowlisted value is the only thing
+      # that gets as far as the git command below.
+      - name: Resolve submodule
+        id: resolve
+        env:
+          REQUESTED: ${{ github.event.client_payload.path }}
         run: |
-          git submodule update --remote content
-          
+          # obsidian-content's dispatch predates this field and sends no path.
+          case "${REQUESTED:-content}" in
+            content | theme)
+              echo "path=${REQUESTED:-content}" >>"$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "::error::Unexpected submodule path: ${REQUESTED}"
+              exit 1
+              ;;
+          esac
+
+      - name: Update submodule
+        run: git submodule update --remote "${{ steps.resolve.outputs.path }}"
+
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v8
         with:
@@ -24,6 +47,7 @@ jobs:
           title: "Auto-update submodule: ${{ github.event.client_payload.submodule }}"
           body: |
             Automated submodule update triggered by changes in ${{ github.event.client_payload.submodule }}
-            
+
             Latest commit: ${{ github.event.client_payload.ref }}
-          branch: update-submodule-${{ github.run_number }}
+          # Per submodule, so a content PR and a theme PR cannot collide.
+          branch: update-${{ steps.resolve.outputs.path }}-${{ github.run_number }}

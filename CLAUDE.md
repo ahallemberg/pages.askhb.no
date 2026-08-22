@@ -36,10 +36,25 @@ Merging a content change does **not** put it live. Nothing deploys until step 4:
 
 1. Push to `main` in `obsidian-content`.
 2. Its `notify-parent.yml` sends a `repository_dispatch` to this repo.
-3. This repo's `update-submodule.yml` runs `git submodule update --remote content` and **opens a pull request** (`Auto-update submodule: …`). It does not merge it.
+3. This repo's `update-submodule.yml` resolves the submodule from the dispatch payload, runs `git submodule update --remote` on it, and **opens a pull request** (`Auto-update submodule: …`). It does not merge it.
 4. Merging that PR bumps the submodule pointer on `main`, which triggers the Cloudflare Pages build.
 
 If a new page 404s after the content repo was merged, check for an unmerged auto-PR here first. Stale auto-PRs accumulate when nobody merges them.
+
+### The palette is not in this repo either
+
+`theme/` is a second **git submodule**, pointing at `https://github.com/ahallemberg/askhb-theme.git`, and it holds the colour tokens for this site *and* for askhb.no. It runs the same dispatch → auto-PR → merge chain as `content/` above, through the same workflow, so the palette has the same failure mode as a note: **a stale auto-PR here means the colours are live on askhb.no and not on this site.**
+
+Do not edit colours in `quartz.config.ts`. Everything under `theme.colors` there is derived — the file holds an adapter, not values, because Quartz has nine colour slots and the shared palette has seven tokens. Change `tokens.css` in the theme repo instead.
+
+Quartz reads the generated `theme/palette.json`, not the `tokens.css` that askhb.no imports, for two reasons that are easy to rediscover the hard way:
+
+- `joinStyles` in `quartz/util/theme.ts` appends its own `:root` block **after** every stylesheet it bundles, `custom.scss` included. A CSS override of `--light` and friends loses on cascade order, so the values have to arrive as data in the config.
+- `quartz.config.ts` is bundled by esbuild into `.quartz-cache` before it runs, so `import.meta.url` there points at the cache file. Reading `tokens.css` off disk by relative path breaks; a JSON module gets inlined into the bundle instead.
+
+Two slots are judgement calls rather than lifts, and the reasoning is in the comment above `scheme()`: `tertiary` serves both link hover and the `::selection` background, and `textHighlight` is derived from the accent because the portfolio has no equivalent.
+
+One upstream quirk survives the change: `DEFAULT_SANS_SERIF` in `quartz/util/theme.ts` is appended as the fallback for *every* font slot, so `--headerFont` falls back to a system sans even though the header font is now a serif. It only shows if Google Fonts fails to load, and fixing it means patching vendored code.
 
 ### Cloudflare caching outlives deletions
 
