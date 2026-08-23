@@ -10,6 +10,14 @@ on:
 jobs:
   update-submodule:
     runs-on: ubuntu-latest
+    # Granted here rather than left to the repository's Actions setting. That
+    # setting defaults to read-only, which fails this job at `git push` with a
+    # 403 long after the dispatch has reported success -- and it is invisible
+    # from the code, so a new consumer repeats it. Stating the two scopes the
+    # job actually needs also drops every other scope the token would carry.
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v7
         with:
