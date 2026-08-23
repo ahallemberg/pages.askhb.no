@@ -1,6 +1,6 @@
 name: Update Submodule
 
-# Two repos dispatch here now: obsidian-content when a note changes, and
+# Two repos dispatch here now: pages-content when a note changes, and
 # askhb-theme when the shared palette changes. Either way this only opens a PR;
 # merging it is what bumps the pointer and triggers the Cloudflare Pages build.
 on:
@@ -34,7 +34,7 @@ jobs:
         env:
           REQUESTED: ${{ github.event.client_payload.path }}
         run: |
-          # obsidian-content's dispatch predates this field and sends no path.
+          # pages-content's dispatch predates this field and sends no path.
           case "${REQUESTED:-content}" in
             content | theme)
               echo "path=${REQUESTED:-content}" >>"$GITHUB_OUTPUT"
