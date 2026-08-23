@@ -1,6 +1,6 @@
 [submodule "content"]
 	path = content
-	url = git@github.com:ahallemberg/obsidian-content.git
+	url = git@github.com:ahallemberg/pages-content.git
 [submodule "theme"]
 	path = theme
 	url = https://github.com/ahallemberg/askhb-theme.git

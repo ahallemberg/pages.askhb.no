@@ -3,7 +3,7 @@
 ## Repository Structure
 
 - **This repo**: Quartz framework and configuration
-- **Content repo**: `ahallemberg/obsidian-content` - Contains all markdown files
+- **Content repo**: `ahallemberg/pages-content` - Contains all markdown files
 - **Content is pulled in as a git submodule**
 
 ## Local Development
