@@ -24,7 +24,9 @@ Node ≥22 (`.node-version` pins v22.16.0), npm ≥10.9.2. `npm test` runs upstr
 
 ### The content is not in this repo
 
-`content/` is a **git submodule** pointing at `git@github.com:ahallemberg/obsidian-content.git` (checked out locally at `~/repos/personal/pages-content`). Markdown notes are authored there, never here.
+`content/` is a **git submodule** pointing at `git@github.com:ahallemberg/pages-content.git` (checked out locally at `~/repos/personal/pages-content`). Markdown notes are authored there, never here.
+
+That repo was called `obsidian-content` until it was renamed, and this repo was `obsidian-publish`. GitHub redirects both, so old URLs and old remotes keep working — which is exactly why the stale names survived here for so long, and why searching GitHub for a repo by the name written in an old doc turns up nothing.
 
 The published slug is the filename verbatim, capitals included: `Computas.md` → `pages.askhb.no/Computas`, and `pages.askhb.no/computas` is a 404.
 
@@ -34,7 +36,7 @@ Never add a `CLAUDE.md` or other agent instructions to `content/`. `ignorePatter
 
 Merging a content change does **not** put it live. Nothing deploys until step 4:
 
-1. Push to `main` in `obsidian-content`.
+1. Push to `main` in `pages-content`.
 2. Its `notify-parent.yml` sends a `repository_dispatch` to this repo.
 3. This repo's `update-submodule.yml` resolves the submodule from the dispatch payload, runs `git submodule update --remote` on it, and **opens a pull request** (`Auto-update submodule: …`). It does not merge it.
 4. Merging that PR bumps the submodule pointer on `main`, which triggers the Cloudflare Pages build.
