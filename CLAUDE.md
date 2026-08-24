@@ -28,7 +28,9 @@ Node ≥22 (`.node-version` pins v22.16.0), npm ≥10.9.2. `npm test` runs upstr
 
 That repo was called `obsidian-content` until it was renamed, and this repo was `obsidian-publish`. GitHub redirects both, so old URLs and old remotes keep working — which is exactly why the stale names survived here for so long, and why searching GitHub for a repo by the name written in an old doc turns up nothing.
 
-The published slug is the filename verbatim, capitals included: `Computas.md` → `pages.askhb.no/Computas`, and `pages.askhb.no/computas` is a 404.
+The published slug keeps the filename's capitals — `Computas.md` → `pages.askhb.no/Computas`, and `pages.askhb.no/computas` is a 404 — but it is not the filename verbatim. `sluggify` in `quartz/util/path.ts` rewrites each path segment: whitespace becomes `-`, `&` becomes `-and-`, `%` becomes `-percent`, and `?` and `#` are dropped.
+
+Spaces are the case that catches people, because the title and the URL stop matching: `Ascend NTNU - Deputy Chief Engineer.md` publishes at `/Ascend-NTNU---Deputy-Chief-Engineer`, three hyphens from space-hyphen-space, and the percent-encoded `/Ascend%20NTNU` is a 404. A `readMoreUrl` written by hand from the note's title will point at nothing.
 
 Never add a `CLAUDE.md` or other agent instructions to `content/`. `ignorePatterns` in `quartz.config.ts` is `["private", "templates", ".obsidian"]`, so any other markdown file there becomes a public page.
 
@@ -60,7 +62,13 @@ One upstream quirk survives the change: `DEFAULT_SANS_SERIF` in `quartz/util/the
 
 ### Cloudflare caching outlives deletions
 
-Pages are served with `cache-control: public, s-maxage=604800`. A page deleted from `content/` disappears from the build but its URL keeps returning 200 from Cloudflare's edge for up to 7 days. Deleting a page is not complete until the URL is purged: Cloudflare dashboard → askhb.no → Caching → Configuration → Custom Purge. The zone has no cache rules or page rules, so its Edge Cache TTL setting does not apply here.
+A page deleted from `content/` disappears from the build but its URL keeps returning 200 from Cloudflare's edge for up to 7 days, served `cache-control: public, s-maxage=604800`. Deleting a page is not complete until the URL is purged: Cloudflare dashboard → askhb.no → Caching → Configuration → Custom Purge. The zone has no cache rules or page rules, so its Edge Cache TTL setting does not apply here.
+
+**Do not try to confirm this by inspecting a page that still exists — it reports the opposite.** While a path is still in the build, Cloudflare serves it from the origin as `cf-cache-status: DYNAMIC`, `cache-control: public, max-age=0, must-revalidate`, with no `age` header, which reads as "nothing is cached here, no purge needed". The `s-maxage=604800` object only becomes observable once the origin stops serving that path and the stale copy takes over. Measuring before the deploy therefore proves nothing about what happens after it.
+
+After a deploy, the honest check is to request the URL twice, bare and with a junk query string. A deleted `/Foo` returning 200 while `/Foo?x=1` returns 404 means the build is correct and only the cached object survives — the query string misses the cache and reaches the origin, which now 404s with `cache-control: no-store`.
+
+`/static/contentIndex.json` is exempt: it is served `max-age=0, must-revalidate` and updates with the deploy. It is what the explorer sidebar and search read, so a deleted page leaves the site's listings immediately. What outlives the deploy is the direct URL alone.
 
 ## Upstream v5: not an upgrade path
 
