@@ -40,14 +40,16 @@ A `QuartzTransformerPlugin` registered in `quartz.config.ts`, using
 `markdownPlugins`. The slug is available by then and this is not an assumption:
 `quartz/processors/parse.ts:105` assigns `file.data.slug` under a comment reading
 "base data properties that plugins may use", and `processor.run` — which executes
-the markdown plugins — is the line after it.
+the markdown plugins — runs three lines below it, with only `processor.parse`
+in between.
 
 The fetch happens once, not once per note. The plugin instance holds a memoised
 promise created on first use, and each file awaits it. Note the caveat rather
 than discovering it later: `parse.ts` shards across worker threads for a large
-vault, and a module-scoped memo is per worker. With eight notes there is one
-worker and one fetch; the statement to hold onto is "once per worker", not "once
-per build", and neither is expensive.
+vault, and the memo — held on the plugin instance, which is constructed once per
+process — is per worker. `parse.ts` clamps concurrency to files/128, capped at
+four, so at three notes there is one worker and one fetch; the statement to hold
+onto is "once per worker", not "once per build", and neither is expensive.
 
 The new field is typed the way every transformer in this tree types its output,
 by declaration merging:
@@ -82,14 +84,25 @@ hiding the one bug the mark's absence would otherwise make obvious. A url that
 does not resolve to a published slug gets no mark, which is exactly what the
 reader gets.
 
-**Only two pages get a mark on day one, and that is correct.** Computas and
-Netlight have `readMoreUrl` values today; Ascend and Q-Free have notes in
-`content/` but no link pointing at them from the bucket. Those pages stay bare
-until their links are set in admin, at which point they acquire marks with no
-code change. This is the matching rule working, not a gap in it — do not add a
-name-based fallback to "fix" it. Matching `Ascend NTNU.md` to the organisation
-called `Ascend Aerial Robotics Team` would require guessing, and guessing wrong
-puts one employer's mark on another's page.
+**Both marked pages are marked on day one, and every page there is stays
+correct.** The pinned `content/` submodule holds three files — `Computas.md`,
+`Netlight.md` and the `index.md` redirect — and Computas and Netlight are exactly
+the two organisations carrying a `readMoreUrl`, so both get their mark and the
+redirect gets nothing.
+
+Read that state carefully, because an earlier draft of this spec got it wrong.
+The five other write-ups were deleted from the content repo on 2026-08-24 in
+"Remove the five write-ups that were never written", so there is no Ascend note
+and no Q-Free note at the pinned commit. What misled the draft is the trap this
+repo's own guidance names: **a local `content/` checkout often sits on a
+different branch than the commit `main` pins**, and the working copy in the main
+clone still shows all eight files. Read the pinned tree, not the directory.
+
+When a write-up is written and linked, it acquires its mark with no code change
+here. Until then the absence is the matching rule working, not a gap in it — do
+not add a name-based fallback to "fix" it. Matching a file called
+`Ascend NTNU.md` to the organisation called `Ascend Aerial Robotics Team` would
+require guessing, and guessing wrong puts one employer's mark on another's page.
 
 ### When the bucket is unreachable
 
@@ -118,6 +131,14 @@ itself, and it lives **outside `quartz/`**, imported directly by
 `quartz.layout.ts` in place of `Component.ArticleTitle()`. It carries its own
 styles as a `css` string on the component, the way `ArticleTitle` does.
 
+The mark's box is 2.75rem here against the companion spec's 2rem, and the
+difference is deliberate rather than drift: there the mark sits beside an `h3` on
+a 268px card, here beside the `h1` that opens a page. Keeping 2rem against a
+heading that much larger reads as a stray favicon rather than an identifying
+mark. The treatment this inherits from that spec is the ink filter and the
+placement, not the pixel size, which was measured against its own heading in both
+cases.
+
 Living outside the vendored tree is the point. This repo keeps a list of local
 patches to `quartz/` precisely because an upstream merge silently reverts them;
 a new file upstream has never heard of cannot be reverted, and this change adds
@@ -132,8 +153,9 @@ only show up in the browser: Flex wraps each child in its own div and defaults
 `align-self` to center, while `.article-title` carries `margin: 2rem 0 0 0`. A
 flex item establishes a block formatting context, so that top margin does not
 collapse out — it makes the title's box 2rem taller at the top, and centering
-against it drops the mark about a centimetre below the text it is supposed to
-sit beside. Correcting that means overriding vendored CSS whose emission order
+that wrapper the taller item, so it sets the line height and does not move, while
+the shorter mark is centred against the whole line and lands half that margin,
+16px, above the text's own centre. Correcting that means overriding vendored CSS whose emission order
 is decided by the order of components in the layout, which is a fragile thing to
 depend on.
 
@@ -233,8 +255,11 @@ no tests for anything in the fork, and this spec does not invent any.
    in scope here.
 2. `npx quartz build --serve`, then read `/Computas` and `/Netlight` in both
    themes and confirm the mark sits beside the title in each.
-3. Confirm a note with no matching link — `/FEYN`, `/Web-Development` — renders
-   exactly as it does today, with the title flush left and no reserved space.
+3. Confirm a page with no matching link renders exactly as it does today, with
+   the title flush left and no reserved space. At the pinned content commit the
+   only such page is `/` — the `index.md` redirect — since the other two notes
+   are both linked. Do not reach for `/FEYN` or `/Web-Development`: those notes
+   were deleted on 2026-08-24 and no longer build.
 4. Break the endpoint deliberately, by pointing the url at a host that does not
    resolve, and confirm the build still completes and every page renders without
    a mark. This is the failure path that matters most and the one least likely to
@@ -244,4 +269,13 @@ no tests for anything in the fork, and this spec does not invent any.
    here.
 6. Check Q-Free's mark keeps its counters in both themes, by temporarily
    pointing a note's match at the Q-Free entry — the registry cannot otherwise
-   be exercised until that link exists.
+   be exercised, since no note links to Q-Free and none exists at the pinned
+   content commit.
+
+None of steps 2 to 6 leaves a trace in the branch, so record the result here
+rather than relying on it being reproducible. As implemented and checked: the
+marks render on both pages in both themes; `/` renders unmarked with the heading
+flush left; an unreachable endpoint warns and still emits every page; the filter
+switches on the attribute, confirmed from computed style rather than by eye; and
+the Q-Free component resolves to ink on paper in light and inverts cleanly in
+dark, counters intact.

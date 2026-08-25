@@ -20,10 +20,12 @@ import QFreeMark from "./QFreeMark"
  * alternative and does not work. Flex wraps each child in its own div and
  * defaults align-self to center, while .article-title carries a 2rem top margin.
  * A flex item establishes a block formatting context, so that margin does not
- * collapse out -- it makes the title's box 2rem taller at the top, and centring
- * against it drops the mark visibly below the text it is meant to sit beside.
- * Correcting that means overriding vendored CSS whose emission order is decided
- * by the order of components in the layout, which is a fragile thing to depend on.
+ * collapse out: it makes the title's wrapper 2rem taller than the text inside it.
+ * That wrapper is then the taller item, so it sets the line height and does not
+ * move, while the shorter mark is centred against the whole line and lands half
+ * that margin -- 16px -- above the text's own centre. Correcting it means
+ * overriding vendored CSS whose emission order is decided by the order of
+ * components in the layout, which is a fragile thing to depend on.
  *
  * The few lines of ArticleTitle duplicated here are stable ones: read the
  * frontmatter title, render an h1.article-title, render nothing without one.
