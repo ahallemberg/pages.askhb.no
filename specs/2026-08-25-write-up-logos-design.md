@@ -102,6 +102,15 @@ that has nothing to do with R2, and a bucket blip must not be able to stop it
 deploying. The degraded state is also the current state — no marks — so nobody
 is served a broken page, only an unadorned one.
 
+**The fetch is also timed out, which this spec originally missed.** Handling
+every error still leaves the failure that raises none: a refused connection
+rejects promptly, but a connection that opens and then stalls never does, and the
+build would wait on it forever — in CI as readily as locally, where it reads as a
+stuck deploy rather than a bucket problem. Ten seconds bounds it, which is far
+past a healthy response for a file this small and far short of anything a person
+would sit through. Note it must bound the whole request rather than connection
+setup alone, since a body can stall after the headers arrive.
+
 ### Rendering
 
 One custom component that owns the whole row: it renders the mark and the `h1`
@@ -215,7 +224,13 @@ submodule, or to askhb.no.
 no tests for anything in the fork, and this spec does not invent any.
 
 1. `npm run check` — `tsc --noEmit` plus prettier. Prettier owns formatting here,
-   so run `npm run format` rather than matching style by hand.
+   so run `npm run format` rather than matching style by hand. **This step cannot
+   go green, and that is not this branch's doing:** `tsc` already reports three
+   errors on `main`, all in `quartz/components/scripts/search.inline.ts`, from a
+   flexsearch typings mismatch. The check that matters is therefore a comparison,
+   not a pass — capture the error list on `main` and confirm this branch's is
+   identical. Fixing the underlying three means editing vendored code and is not
+   in scope here.
 2. `npx quartz build --serve`, then read `/Computas` and `/Netlight` in both
    themes and confirm the mark sits beside the title in each.
 3. Confirm a note with no matching link — `/FEYN`, `/Web-Development` — renders

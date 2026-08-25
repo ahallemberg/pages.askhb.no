@@ -48,6 +48,13 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> =>
  * would otherwise make obvious. A url that does not name a published slug gets
  * nothing, which is what the reader gets too.
  *
+ * One leniency does survive that, and it is decoding's fault rather than the
+ * comparison's: `%2F` becomes a `/`, so a percent-encoded slash matches a real
+ * path separator even though the url itself 404s. Decoding stays anyway, because
+ * it is load-bearing in the other direction -- `new URL()` percent-encodes a
+ * non-ASCII slug written literally, and only decoding brings it back. No
+ * hand-written link reaches the case.
+ *
  * decodeURIComponent throws on a malformed escape, so it is guarded: a mangled url
  * costs its own mark and not the build.
  */
@@ -74,10 +81,20 @@ const writeUpSlug = (raw: unknown): string | undefined => {
 }
 
 /*
- * Read field by field rather than cast, the same stance src/func/organisations.ts
- * takes in the portfolio repo: this file is hand-editable JSON served from a
- * bucket, and a shape that does not match the type is a thing that happens rather
- * than a thing that cannot. Anything unreadable costs its own entry.
+ * Read field by field rather than cast: this file is hand-editable JSON served
+ * from a bucket, and a shape that does not match the type is a thing that happens
+ * rather than a thing that cannot. Anything unreadable costs its own entry.
+ *
+ * That is the same *stance* src/func/organisations.ts takes in the portfolio repo,
+ * but deliberately not the same coverage, so do not read it as parity. That file
+ * also rebuilds the flat pre-grouping shape -- one row per role, the employer
+ * repeated, no `roles` array -- and merges rows that share an employer. This reads
+ * grouped entries only. A legacy row therefore contributes no slugs here while
+ * askhb.no can still paint its mark, which is a divergence rather than a crash:
+ * that page loses its mark and nothing else. Accepted because the migration is
+ * behind us -- every entry in the live file is grouped, and admin writes nothing
+ * else -- so handling the old shape would be code for a state the bucket has
+ * already left.
  *
  * Note where the links live. `experiences.json` hangs them off *roles*, not
  * organisations -- a role carries `links[]`, and older entries a lone
@@ -85,10 +102,12 @@ const writeUpSlug = (raw: unknown): string | undefined => {
  * walks down to the roles to find the slugs and back up to the organisation for
  * the logo.
  *
- * First claim on a slug wins. Two roles under one employer routinely point at the
- * same write-up, and they agree about the mark; the tie-break only matters for a
- * hand-edit that pointed two employers at one page, and there the first is as
- * good an answer as any.
+ * First claim on a slug wins, where "first" counts only organisations that have a
+ * logo: one without is skipped before its roles are read, so it never reserves a
+ * slug it could not have marked anyway. Two roles under one employer routinely
+ * point at the same write-up and agree about the mark; the tie-break only matters
+ * for a hand-edit that pointed two employers at one page, and there the first is
+ * as good an answer as any.
  */
 const buildMarkMap = (value: unknown): MarkBySlug => {
   const bySlug: MarkBySlug = new Map()
@@ -178,6 +197,12 @@ export const OrganisationMarks: QuartzTransformerPlugin = () => {
    * for a large vault, and this closure lives in each. At this vault's size there
    * is one worker and one request, and even several would be cheap -- the honest
    * claim is "once per worker", not "once per build".
+   *
+   * It also lives as long as the process, which is what `--serve` wants watching:
+   * one process spans every rebuild, so a logo replaced in admin stays stale for
+   * the rest of the dev session no matter how many times the site rebuilds.
+   * Restart the server to pick it up. Deploys are unaffected, being a fresh
+   * process each time.
    */
   let markMap: Promise<MarkBySlug> | undefined
 
