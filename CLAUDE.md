@@ -137,3 +137,9 @@ Changes reach `main` through a pull request, not a direct push; the history is m
 ## Deployment
 
 Cloudflare Pages, building from `main` of this repo. Dependabot opens grouped npm and github-actions update PRs monthly, minus the ignored packages above.
+
+**A change in the R2 bucket does not deploy this site, and that has already been mistaken for a bug twice.** `plugins/organisationMark.ts` fetches the logos and their write-up links at build time, and nothing here watches R2. So setting a link in admin.askhb.no updates askhb.no immediately — it fetches at runtime — while this site keeps serving pages built before that link existed. Both times the symptom was the same: a page that should carry a mark and does not, with correct data in the bucket and correct code on `main`.
+
+The sequence is therefore: set the link in admin, **then** cause a build here. Anything that lands a commit on `main` does it — an auto-update submodule PR, or any other merge — and so does _Retry deployment_ on the latest production deployment in the Cloudflare dashboard. A push to the content repo alone does not, both because the deploy follows this repo rather than that one and because its dispatch has been broken since 2026-08-24.
+
+Before concluding a mark is broken, check the build date against when the link was set. `curl -s https://pages.askhb.no/static/contentIndex.json` shows what is published; the page's own HTML shows whether it carries an `organisation-mark`.
