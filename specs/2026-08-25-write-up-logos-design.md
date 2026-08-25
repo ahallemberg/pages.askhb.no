@@ -84,25 +84,48 @@ hiding the one bug the mark's absence would otherwise make obvious. A url that
 does not resolve to a published slug gets no mark, which is exactly what the
 reader gets.
 
-**Both marked pages are marked on day one, and every page there is stays
-correct.** The pinned `content/` submodule holds three files — `Computas.md`,
-`Netlight.md` and the `index.md` redirect — and Computas and Netlight are exactly
-the two organisations carrying a `readMoreUrl`, so both get their mark and the
-redirect gets nothing.
+**Which pages carry a mark, and why the others do not.** The pinned `content/`
+submodule holds six notes: `Computas`, `Netlight`, `Q-Free`, `Veivett`,
+`Trafikkskiltene` and the `index` redirect. Employers claim the first three;
+projects claim the next two once their links are set; `index` claims nothing and
+should not.
 
-Read that state carefully, because an earlier draft of this spec got it wrong.
-The five other write-ups were deleted from the content repo on 2026-08-24 in
-"Remove the five write-ups that were never written", so there is no Ascend note
-and no Q-Free note at the pinned commit. What misled the draft is the trap this
-repo's own guidance names: **a local `content/` checkout often sits on a
-different branch than the commit `main` pins**, and the working copy in the main
-clone still shows all eight files. Read the pinned tree, not the directory.
+Read that state from the pinned tree, and note that this spec has now been wrong
+about it twice in opposite directions. The first draft said Ascend and Q-Free had
+notes, reading a local `content/` checkout that sits on a different branch than
+`main` pins. The correction then said three notes, reading the pinned tree of a
+branch cut before an auto-update PR moved the pointer. **A local checkout and an
+older branch are two different ways to read the wrong tree** — take it from
+`git ls-tree origin/main content`, and from `contentIndex.json` on the live site
+for what is actually published.
 
-When a write-up is written and linked, it acquires its mark with no code change
-here. Until then the absence is the matching rule working, not a gap in it — do
-not add a name-based fallback to "fix" it. Matching a file called
-`Ascend NTNU.md` to the organisation called `Ascend Aerial Robotics Team` would
-require guessing, and guessing wrong puts one employer's mark on another's page.
+An unlinked page is the matching rule working, not a gap in it, so do not add a
+name-based fallback to "fix" it. The Ascend write-up is the case that settles
+this: the note will be called something like `Ascend NTNU` while the organisation
+is `Ascend Aerial Robotics Team`, and no name heuristic pairs those. It needs a
+link set in admin, and then it acquires its mark with no code change here.
+
+### Projects carry marks too
+
+`projects.json` is read alongside `experiences.json`, because a write-up can
+belong to a project as readily as to an employer, and Veivett and Trafikkskiltene
+both have one.
+
+The two files differ only in depth. An organisation holds its logo above a list
+of roles, and the links hang off the roles; a project holds its logo and its
+links side by side, with no role in between. Both spell a logo with the same two
+field names, which is what lets one lookup and one `LogoMark` serve both — the
+same reuse the companion spec argued for on the portfolio side.
+
+Two consequences worth stating:
+
+- **They fail apart.** Each file is fetched independently and swallows its own
+  error, so a bucket serving one and not the other still marks every page the
+  surviving file covers. There is no reason a projects outage should cost an
+  employer its mark.
+- **Employers win a contested slug.** A slug can be claimed once, and employers
+  are walked first. Nothing in the live data contests one; if anything ever did,
+  an employer is the likelier owner of a write-up.
 
 ### When the bucket is unreachable
 
@@ -240,10 +263,14 @@ askhb.no rather than only adding here.
 
 ## Not in this spec
 
-Setting `readMoreUrl` on the Ascend and Q-Free entries, which is content work in
-admin and is what makes those pages acquire marks. Writing the Ascend and Q-Free
-notes, which are placeholders today. Any change to `quartz/`, to the palette
-submodule, or to askhb.no.
+Setting the links that make a page acquire its mark, which is content work in
+admin. That now covers projects as well as employers: `projects.json` carries no
+link field until askhb.no and admin.askhb.no add one, so Veivett and
+Trafikkskiltene stay unmarked until that lands and the links are set. This side
+is ready for them and needs no further change.
+
+Writing the Ascend note. Any change to `quartz/`, to the palette submodule, or to
+askhb.no.
 
 ## Verification
 
