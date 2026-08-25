@@ -126,6 +126,19 @@ const buildMarkMap = (value: unknown): MarkBySlug => {
 }
 
 /*
+ * How long to wait before giving up on the bucket.
+ *
+ * A timeout is the difference between degrading and hanging, and without one the
+ * failure this plugin is careful about is the only one it does not survive: a
+ * refused connection rejects promptly, but a connection that opens and then
+ * stalls never does, and `npx quartz build` would wait on it forever -- in CI as
+ * readily as locally, where it reads as a stuck deploy rather than a bucket
+ * problem. Ten seconds is far past a healthy response for a file this small and
+ * far short of anything a person would sit through.
+ */
+const FETCH_TIMEOUT_MS = 10_000
+
+/*
  * Every failure lands in the same place: an empty map, a warning, and a build that
  * finishes. A write-up is prose that has nothing to do with R2, and a bucket blip
  * must not be able to stop it deploying. The degraded state is also the state
@@ -142,7 +155,9 @@ const fetchMarkMap = async (): Promise<MarkBySlug> => {
     )
 
   try {
-    const response = await fetch(EXPERIENCES_ENDPOINT)
+    const response = await fetch(EXPERIENCES_ENDPOINT, {
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    })
     if (!response.ok) {
       warn(`${response.status} ${response.statusText}`)
       return new Map()
