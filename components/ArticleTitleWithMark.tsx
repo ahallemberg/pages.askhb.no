@@ -162,8 +162,8 @@ ArticleTitleWithMark.css = `
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2.75rem;
-  height: 2.75rem;
+  width: 2.5rem;
+  height: 2.5rem;
 }
 
 .organisation-mark > span {

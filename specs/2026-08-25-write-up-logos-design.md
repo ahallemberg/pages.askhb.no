@@ -131,13 +131,18 @@ itself, and it lives **outside `quartz/`**, imported directly by
 `quartz.layout.ts` in place of `Component.ArticleTitle()`. It carries its own
 styles as a `css` string on the component, the way `ArticleTitle` does.
 
-The mark's box is 2.75rem here against the companion spec's 2rem, and the
+The mark's box is 2.5rem here against the companion spec's 2rem, and the
 difference is deliberate rather than drift: there the mark sits beside an `h3` on
 a 268px card, here beside the `h1` that opens a page. Keeping 2rem against a
 heading that much larger reads as a stray favicon rather than an identifying
 mark. The treatment this inherits from that spec is the ink filter and the
 placement, not the pixel size, which was measured against its own heading in both
 cases.
+
+It was 2.75rem first, and came down one step on review of the built page against
+2.5, 2.375 and 2.25. 2.5rem keeps the mark paired with the heading rather than
+subordinate to it, which is where the two smaller options land, while reading
+lighter than 2.75.
 
 Living outside the vendored tree is the point. This repo keeps a list of local
 patches to `quartz/` precisely because an upstream merge silently reverts them;
