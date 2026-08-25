@@ -19,6 +19,7 @@ import { QuartzTransformerPlugin } from "../quartz/plugins/types"
  */
 
 const EXPERIENCES_ENDPOINT = "https://r2.askhb.no/experiences.json"
+const PROJECTS_ENDPOINT = "https://r2.askhb.no/projects.json"
 
 // Only links that point at this site can name one of its pages.
 const WRITE_UP_HOST = "pages.askhb.no"
@@ -109,39 +110,77 @@ const writeUpSlug = (raw: unknown): string | undefined => {
  * for a hand-edit that pointed two employers at one page, and there the first is
  * as good an answer as any.
  */
-const buildMarkMap = (value: unknown): MarkBySlug => {
+const claimSlugs = (
+  bySlug: MarkBySlug,
+  carrier: Record<string, unknown>,
+  mark: OrganisationMark,
+) => {
+  const links = Array.isArray(carrier.links) ? carrier.links : []
+  const candidates = [
+    ...links.map((link) => (isPlainObject(link) ? link.url : undefined)),
+    carrier.readMoreUrl,
+  ]
+
+  for (const candidate of candidates) {
+    const slug = writeUpSlug(candidate)
+    if (slug !== undefined && !bySlug.has(slug)) bySlug.set(slug, mark)
+  }
+}
+
+/*
+ * The mark an entry would lend its pages, or undefined if it has none to lend.
+ * Shared by both files because the two spell a logo identically -- deliberately,
+ * so that one LogoMark serves both sections on askhb.no and one lookup serves
+ * both here.
+ */
+const markOf = (entry: Record<string, unknown>): OrganisationMark | undefined => {
+  const logoUrl = entry.logoUrl
+  if (typeof logoUrl !== "string" || logoUrl.trim() === "") return undefined
+
+  return {
+    logoUrl,
+    // isFinite, not typeof: NaN and Infinity are both numbers, and either one
+    // reaches the markup as transform: scale(NaN), which the browser drops as an
+    // invalid declaration. The mark then renders unscaled, which looks like the
+    // scale was ignored rather than rejected.
+    logoScale: Number.isFinite(entry.logoScale) ? (entry.logoScale as number) : undefined,
+  }
+}
+
+const buildMarkMap = (experiences: unknown, projects: unknown): MarkBySlug => {
   const bySlug: MarkBySlug = new Map()
-  if (!Array.isArray(value)) return bySlug
 
-  for (const organisation of value) {
-    if (!isPlainObject(organisation)) continue
+  /*
+   * Employers first, and the order is the tie-break rather than an accident. A
+   * slug can only be claimed once, and if a project and an employer ever pointed
+   * at one page the employer is the likelier owner of a write-up. Nothing in the
+   * live data does.
+   */
+  if (Array.isArray(experiences)) {
+    for (const organisation of experiences) {
+      if (!isPlainObject(organisation)) continue
 
-    const logoUrl = organisation.logoUrl
-    if (typeof logoUrl !== "string" || logoUrl.trim() === "") continue
+      const mark = markOf(organisation)
+      if (!mark) continue
 
-    const logoScale =
-      // isFinite, not typeof: NaN and Infinity are both numbers, and either one
-      // reaches the markup as transform: scale(NaN), which the browser drops as
-      // an invalid declaration. The mark then renders unscaled, which looks like
-      // the scale was ignored rather than rejected.
-      Number.isFinite(organisation.logoScale) ? (organisation.logoScale as number) : undefined
-    const roles = Array.isArray(organisation.roles) ? organisation.roles : []
-
-    for (const role of roles) {
-      if (!isPlainObject(role)) continue
-
-      const links = Array.isArray(role.links) ? role.links : []
-      const candidates = [
-        ...links.map((link) => (isPlainObject(link) ? link.url : undefined)),
-        role.readMoreUrl,
-      ]
-
-      for (const candidate of candidates) {
-        const slug = writeUpSlug(candidate)
-        if (slug !== undefined && !bySlug.has(slug)) {
-          bySlug.set(slug, { logoUrl, logoScale })
-        }
+      // The links hang off the roles, one level below the logo.
+      const roles = Array.isArray(organisation.roles) ? organisation.roles : []
+      for (const role of roles) {
+        if (isPlainObject(role)) claimSlugs(bySlug, role, mark)
       }
+    }
+  }
+
+  /*
+   * Projects are flat where organisations are nested: a project carries its own
+   * links beside its own logo, with no role in between.
+   */
+  if (Array.isArray(projects)) {
+    for (const project of projects) {
+      if (!isPlainObject(project)) continue
+
+      const mark = markOf(project)
+      if (mark) claimSlugs(bySlug, project, mark)
     }
   }
 
@@ -168,28 +207,46 @@ const FETCH_TIMEOUT_MS = 10_000
  * before this plugin existed -- pages with no marks -- so nobody is served a
  * broken page, only an unadorned one.
  */
-const fetchMarkMap = async (): Promise<MarkBySlug> => {
+const fetchJson = async (endpoint: string): Promise<unknown> => {
   const warn = (reason: string) =>
     console.log(
       styleText(
         "yellow",
-        `\nWarning: could not read organisation logos from ${EXPERIENCES_ENDPOINT} (${reason}). Write-ups will render without their marks.`,
+        `\nWarning: could not read logos from ${endpoint} (${reason}). Pages that would take their mark from it will render without one.`,
       ),
     )
 
   try {
-    const response = await fetch(EXPERIENCES_ENDPOINT, {
+    const response = await fetch(endpoint, {
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     })
     if (!response.ok) {
       warn(`${response.status} ${response.statusText}`)
-      return new Map()
+      return undefined
     }
-    return buildMarkMap(await response.json())
+    return await response.json()
   } catch (error) {
     warn(error instanceof Error ? error.message : String(error))
-    return new Map()
+    return undefined
   }
+}
+
+/*
+ * Both files, fetched together and failing apart. Each call swallows its own
+ * error and returns undefined, so a bucket that serves one and not the other
+ * still marks every page the surviving file covers -- there is no reason a
+ * projects outage should cost an employer its mark. buildMarkMap treats
+ * undefined as "not an array" and skips that pass.
+ *
+ * Concurrent rather than sequential: they do not depend on each other, and the
+ * timeout is per request either way.
+ */
+const fetchMarkMap = async (): Promise<MarkBySlug> => {
+  const [experiences, projects] = await Promise.all([
+    fetchJson(EXPERIENCES_ENDPOINT),
+    fetchJson(PROJECTS_ENDPOINT),
+  ])
+  return buildMarkMap(experiences, projects)
 }
 
 export const OrganisationMarks: QuartzTransformerPlugin = () => {
