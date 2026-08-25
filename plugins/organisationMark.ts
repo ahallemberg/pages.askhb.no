@@ -120,7 +120,11 @@ const buildMarkMap = (value: unknown): MarkBySlug => {
     if (typeof logoUrl !== "string" || logoUrl.trim() === "") continue
 
     const logoScale =
-      typeof organisation.logoScale === "number" ? organisation.logoScale : undefined
+      // isFinite, not typeof: NaN and Infinity are both numbers, and either one
+      // reaches the markup as transform: scale(NaN), which the browser drops as
+      // an invalid declaration. The mark then renders unscaled, which looks like
+      // the scale was ignored rather than rejected.
+      Number.isFinite(organisation.logoScale) ? (organisation.logoScale as number) : undefined
     const roles = Array.isArray(organisation.roles) ? organisation.roles : []
 
     for (const role of roles) {

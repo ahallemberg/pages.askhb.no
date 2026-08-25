@@ -20,6 +20,10 @@ npm run docs                # serve Quartz's own docs/ folder
 
 Node ≥22 (`.node-version` pins v22.16.0), npm ≥10.9.2. `npm test` runs upstream's `tsx --test` suite; there are no tests for anything in this fork. Verify changes with `npx quartz build --serve`.
 
+**`npm run check` does not go green, and has not for a while.** `tsc` reports three errors in `quartz/components/scripts/search.inline.ts`, from a flexsearch typings mismatch in vendored code. Because the script is `tsc --noEmit && prettier --check`, prettier never runs behind them. So the useful check on a branch is a comparison, not a pass: capture the error list on `main` and confirm yours is identical, and run `npx prettier . --check` separately.
+
+**The build makes a network call.** `plugins/organisationMark.ts` fetches `experiences.json` from R2 so write-ups can carry their employer's logo, which means `npx quartz build` is no longer offline. It is bounded: one request per worker, a 10 second timeout, and every failure degrades to a warning plus pages with no marks rather than a failed build. A build on a machine with no network is therefore slower by up to ten seconds and otherwise fine.
+
 ## Architecture
 
 ### The content is not in this repo
@@ -47,7 +51,7 @@ If a new page 404s after the content repo was merged, check for an unmerged auto
 
 ### The palette is not in this repo either
 
-`theme/` is a second **git submodule**, pointing at `https://github.com/ahallemberg/askhb-theme.git`, and it holds the colour tokens for this site *and* for askhb.no. It runs the same dispatch → auto-PR → merge chain as `content/` above, through the same workflow, so the palette has the same failure mode as a note: **a stale auto-PR here means the colours are live on askhb.no and not on this site.**
+`theme/` is a second **git submodule**, pointing at `https://github.com/ahallemberg/askhb-theme.git`, and it holds the colour tokens for this site _and_ for askhb.no. It runs the same dispatch → auto-PR → merge chain as `content/` above, through the same workflow, so the palette has the same failure mode as a note: **a stale auto-PR here means the colours are live on askhb.no and not on this site.**
 
 Do not edit colours in `quartz.config.ts`. Everything under `theme.colors` there is derived — the file holds an adapter, not values, because Quartz has nine colour slots and the shared palette has seven tokens. Change `tokens.css` in the theme repo instead.
 
@@ -58,7 +62,7 @@ Quartz reads the generated `theme/palette.json`, not the `tokens.css` that askhb
 
 Two slots are judgement calls rather than lifts, and the reasoning is in the comment above `scheme()`: `tertiary` serves both link hover and the `::selection` background, and `textHighlight` is derived from the accent because the portfolio has no equivalent.
 
-One upstream quirk survives the change: `DEFAULT_SANS_SERIF` in `quartz/util/theme.ts` is appended as the fallback for *every* font slot, so `--headerFont` falls back to a system sans even though the header font is now a serif. It only shows if Google Fonts fails to load, and fixing it means patching vendored code.
+One upstream quirk survives the change: `DEFAULT_SANS_SERIF` in `quartz/util/theme.ts` is appended as the fallback for _every_ font slot, so `--headerFont` falls back to a system sans even though the header font is now a serif. It only shows if Google Fonts fails to load, and fixing it means patching vendored code.
 
 ### Cloudflare caching outlives deletions
 
@@ -81,6 +85,19 @@ Upstream's default branch is now Quartz 5, but it is a rebuild rather than a ver
 
 The upside is real but later: no fork to maintain, plugins via npm, and the pinned dependencies above stop mattering. Revisit against a settled 5.x.
 
+### The fork's own components and plugins
+
+Two top-level directories hold code that is this site's rather than Quartz's:
+
+- `components/` — `ArticleTitleWithMark.tsx`, which the content layout renders in place of `Component.ArticleTitle()`, plus `QFreeMark.tsx`
+- `plugins/` — `organisationMark.ts`, the build-time transformer registered in `quartz.config.ts`
+
+They sit outside `quartz/` deliberately, and it is the same reasoning as the local-patches warning below: an upstream merge silently reverts edits inside the vendored tree, and a file upstream has never heard of cannot be reverted. `quartz.layout.ts` and `quartz.config.ts` import them by relative path; esbuild bundles anything reachable from `quartz/build.ts` with the preact JSX transform, and `tsconfig.json` includes `**/*.ts(x)` repo-wide, so both are covered without configuration.
+
+The design and its rejected alternatives are in `specs/2026-08-25-write-up-logos-design.md`. `specs/` is where this fork's design notes go — not `docs/`, which is vendored Quartz documentation and untouched since the initial commit.
+
+**One drift risk this creates.** `ArticleTitleWithMark` duplicates the handful of lines in `quartz/components/ArticleTitle.tsx` that read the frontmatter title and render the `h1`, because it owns the whole row. If upstream changes what `ArticleTitle` renders, the content pages will not follow — re-check it alongside the local patches below after any Quartz upgrade.
+
 ## Local patches to vendored Quartz
 
 Changes made to `quartz/` in this fork. **A merge from `upstream` can silently revert these — re-check them after any Quartz upgrade.**
@@ -95,11 +112,11 @@ Changes made to `quartz/` in this fork. **A merge from `upstream` can silently r
 
 **Three npm packages are pinned below their latest and must stay there** while this fork tracks Quartz 4.5.1. Each was tried and reverted:
 
-| Package | Held at | Why |
-|---|---|---|
-| `js-yaml` | 4.x | v5 removed the default export Quartz imports — `npx quartz build` fails outright |
-| `typescript` | 5.x | v6 rejects `moduleResolution: node10` in `tsconfig.json`; v7 removed the mode |
-| `@types/hast` | 3.0.4 | 3.0.5 types `hProperties.className` as `string[]`, but `quartz/plugins/transformers/ofm.ts` assigns a string |
+| Package       | Held at | Why                                                                                                          |
+| ------------- | ------- | ------------------------------------------------------------------------------------------------------------ |
+| `js-yaml`     | 4.x     | v5 removed the default export Quartz imports — `npx quartz build` fails outright                             |
+| `typescript`  | 5.x     | v6 rejects `moduleResolution: node10` in `tsconfig.json`; v7 removed the mode                                |
+| `@types/hast` | 3.0.4   | 3.0.5 types `hProperties.className` as `string[]`, but `quartz/plugins/transformers/ofm.ts` assigns a string |
 
 `.github/dependabot.yml` carries matching `ignore` rules so these are not re-proposed every month. Re-check them when upgrading Quartz itself, not before, and keep the config and this table in sync.
 

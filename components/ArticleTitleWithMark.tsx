@@ -90,8 +90,11 @@ const ArticleTitleWithMark: QuartzComponent = ({
    * ordinary object, so a logo stored as constructor.png would otherwise reach
    * Object.prototype and return something truthy that is not a component.
    * Normalising does not remove the hazard -- it strips the underscores out of
-   * __proto__ but leaves constructor, valueOf and toString spelled as inherited
-   * keys.
+   * __proto__, but `constructor` survives it spelled exactly as the inherited key
+   * -- and it is the only one that does, since lowercasing turns toString into
+   * tostring and valueOf into valueof, which inherit from nothing. One key is
+   * enough: a bare lookup on it returns Object itself, a function, which preact
+   * would call as a component.
    */
   const key = mark ? markKey(mark.logoUrl) : ""
   const Mark = Object.hasOwn(MARKS, key) ? MARKS[key] : undefined
@@ -106,6 +109,12 @@ const ArticleTitleWithMark: QuartzComponent = ({
        * The mark is decorative and carries no label -- the company name is the
        * h1 directly beside it, and naming it here would be the second reading of
        * one string.
+       *
+       * Note where else this ends up: the page header is a .popover-hint, and
+       * popover.inline.ts clones that subtree into the hover preview, so the mark
+       * appears there too and fetches its image on hover. That reads correctly
+       * and costs one small request, so it is left alone rather than excluded --
+       * but it is why the mark shows up somewhere nobody put it.
        */}
       {mark && (
         <span class="organisation-mark">
