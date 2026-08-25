@@ -1,5 +1,6 @@
 import { QuartzConfig } from "./quartz/cfg"
 import * as Plugin from "./quartz/plugins"
+import { OrganisationMarks } from "./plugins/organisationMark"
 import palette from "./theme/palette.json"
 
 /**
@@ -90,6 +91,9 @@ const config: QuartzConfig = {
       Plugin.CrawlLinks({ markdownLinkResolution: "shortest" }),
       Plugin.Description(),
       Plugin.Latex({ renderEngine: "katex" }),
+      // Not from ./quartz/plugins: this one belongs to the fork, so it lives
+      // outside the vendored tree where an upstream merge cannot revert it.
+      OrganisationMarks(),
     ],
     filters: [Plugin.RemoveDrafts()],
     emitters: [
